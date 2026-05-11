@@ -1,0 +1,245 @@
+name: IMU Thermal Calibration
+version: 0.1.0
+description: Computes per-axis polynomial thermal compensation for an IMU's accelerometer and gyroscope, then validates fit quality.
+
+unit:
+  auto_identify: true
+  serial_number:
+    default_value: "SN00001"
+  part_number:
+    default_value: "PCB01"
+
+plugs:
+  - name: Mock DUT
+    description: Simulated device under test that returns logged IMU CSV data.
+    python: plugs.mock_dut:MockDut
+    key: dut
+
+main:
+  - name: Connect DUT
+    key: connect_dut
+    python: phases.connect_dut
+
+  - name: Thermal Calibration
+    key: thermal_calibration
+    description: Retrieve IMU log, validate raw data, compute polynomial fit, validate residuals, save calibration to DUT.
+    python: phases.thermal_calibration
+    depends_on:
+      - connect_dut
+    measurements:
+      # ---- Raw-data validation ----
+      - name: Acc Noise Density X
+        key: acc_noise_density_x
+        unit: m/s²/√Hz
+        validators:
+          - {operator: ">=", expected_value: 0.0}
+          - {operator: "<=", expected_value: 0.003}
+      - name: Acc Noise Density Y
+        key: acc_noise_density_y
+        unit: m/s²/√Hz
+        validators:
+          - {operator: ">=", expected_value: 0.0}
+          - {operator: "<=", expected_value: 0.003}
+      - name: Acc Noise Density Z
+        key: acc_noise_density_z
+        unit: m/s²/√Hz
+        validators:
+          - {operator: ">=", expected_value: 0.0}
+          - {operator: "<=", expected_value: 0.003}
+      - name: Gyro Noise Density X
+        key: gyro_noise_density_x
+        unit: °/s/√Hz
+        validators:
+          - {operator: ">=", expected_value: 0.0}
+          - {operator: "<=", expected_value: 0.005}
+      - name: Gyro Noise Density Y
+        key: gyro_noise_density_y
+        unit: °/s/√Hz
+        validators:
+          - {operator: ">=", expected_value: 0.0}
+          - {operator: "<=", expected_value: 0.005}
+      - name: Gyro Noise Density Z
+        key: gyro_noise_density_z
+        unit: °/s/√Hz
+        validators:
+          - {operator: ">=", expected_value: 0.0}
+          - {operator: "<=", expected_value: 0.005}
+
+      - name: Acc Temp Sensitivity Ref X
+        key: acc_temp_sensitivity_ref_x
+        unit: m/s²/°C
+        validators:
+          - {operator: ">=", expected_value: 5.0e-4}
+          - {operator: "<=", expected_value: 1.0e-2}
+      - name: Acc Temp Sensitivity Ref Y
+        key: acc_temp_sensitivity_ref_y
+        unit: m/s²/°C
+        validators:
+          - {operator: ">=", expected_value: 5.0e-4}
+          - {operator: "<=", expected_value: 1.0e-2}
+      - name: Acc Temp Sensitivity Ref Z
+        key: acc_temp_sensitivity_ref_z
+        unit: m/s²/°C
+        validators:
+          - {operator: ">=", expected_value: 5.0e-4}
+          - {operator: "<=", expected_value: 1.0e-2}
+      - name: Gyro Temp Sensitivity Ref X
+        key: gyro_temp_sensitivity_ref_x
+        unit: °/s/°C
+        validators:
+          - {operator: ">=", expected_value: 6.0e-5}
+          - {operator: "<=", expected_value: 1.0}
+      - name: Gyro Temp Sensitivity Ref Y
+        key: gyro_temp_sensitivity_ref_y
+        unit: °/s/°C
+        validators:
+          - {operator: ">=", expected_value: 6.0e-5}
+          - {operator: "<=", expected_value: 1.0}
+      - name: Gyro Temp Sensitivity Ref Z
+        key: gyro_temp_sensitivity_ref_z
+        unit: °/s/°C
+        validators:
+          - {operator: ">=", expected_value: 6.0e-5}
+          - {operator: "<=", expected_value: 1.0}
+
+      # ---- Multi-dimensional calibration curves (replace PNG attachments) ----
+      - name: Acc Calibration X
+        key: acc_calibration_x
+        title: Accelerometer X vs Temperature
+        description: Raw accelerometer X readings vs internal temperature, with fitted 3rd-order polynomial and residuals.
+        x_axis: {legend: Temperature, unit: "°C"}
+        y_axis:
+          - {legend: Raw, key: raw, unit: "m/s²"}
+          - {legend: Fitted, key: fitted, unit: "m/s²"}
+          - legend: Residual
+            key: residual
+            unit: "m/s²"
+            aggregations:
+              - type: mean
+                validators:
+                  - {operator: ">=", expected_value: -0.01}
+                  - {operator: "<=", expected_value: 0.01}
+              - type: std
+                validators:
+                  - {operator: "<=", expected_value: 5.0}
+              - type: p2p
+                validators:
+                  - {operator: "<=", expected_value: 15.0}
+
+      - name: Acc Calibration Y
+        key: acc_calibration_y
+        title: Accelerometer Y vs Temperature
+        x_axis: {legend: Temperature, unit: "°C"}
+        y_axis:
+          - {legend: Raw, key: raw, unit: "m/s²"}
+          - {legend: Fitted, key: fitted, unit: "m/s²"}
+          - legend: Residual
+            key: residual
+            unit: "m/s²"
+            aggregations:
+              - type: mean
+                validators:
+                  - {operator: ">=", expected_value: -0.01}
+                  - {operator: "<=", expected_value: 0.01}
+              - type: std
+                validators:
+                  - {operator: "<=", expected_value: 5.0}
+              - type: p2p
+                validators:
+                  - {operator: "<=", expected_value: 15.0}
+
+      - name: Acc Calibration Z
+        key: acc_calibration_z
+        title: Accelerometer Z vs Temperature
+        x_axis: {legend: Temperature, unit: "°C"}
+        y_axis:
+          - {legend: Raw, key: raw, unit: "m/s²"}
+          - {legend: Fitted, key: fitted, unit: "m/s²"}
+          - legend: Residual
+            key: residual
+            unit: "m/s²"
+            aggregations:
+              - type: mean
+                validators:
+                  - {operator: ">=", expected_value: -0.01}
+                  - {operator: "<=", expected_value: 0.01}
+              - type: std
+                validators:
+                  - {operator: "<=", expected_value: 5.0}
+              - type: p2p
+                validators:
+                  - {operator: "<=", expected_value: 35.0}
+
+      - name: Gyro Calibration X
+        key: gyro_calibration_x
+        title: Gyroscope X vs Temperature
+        x_axis: {legend: Temperature, unit: "°C"}
+        y_axis:
+          - {legend: Raw, key: raw, unit: "°/s"}
+          - {legend: Fitted, key: fitted, unit: "°/s"}
+          - legend: Residual
+            key: residual
+            unit: "°/s"
+            aggregations:
+              - type: mean
+                validators:
+                  - {operator: ">=", expected_value: -0.01}
+                  - {operator: "<=", expected_value: 0.01}
+              - type: std
+                validators:
+                  - {operator: "<=", expected_value: 0.3}
+              - type: p2p
+                validators:
+                  - {operator: "<=", expected_value: 2.0}
+
+      - name: Gyro Calibration Y
+        key: gyro_calibration_y
+        title: Gyroscope Y vs Temperature
+        x_axis: {legend: Temperature, unit: "°C"}
+        y_axis:
+          - {legend: Raw, key: raw, unit: "°/s"}
+          - {legend: Fitted, key: fitted, unit: "°/s"}
+          - legend: Residual
+            key: residual
+            unit: "°/s"
+            aggregations:
+              - type: mean
+                validators:
+                  - {operator: ">=", expected_value: -0.01}
+                  - {operator: "<=", expected_value: 0.01}
+              - type: std
+                validators:
+                  - {operator: "<=", expected_value: 0.3}
+              - type: p2p
+                validators:
+                  - {operator: "<=", expected_value: 2.0}
+
+      - name: Gyro Calibration Z
+        key: gyro_calibration_z
+        title: Gyroscope Z vs Temperature
+        x_axis: {legend: Temperature, unit: "°C"}
+        y_axis:
+          - {legend: Raw, key: raw, unit: "°/s"}
+          - {legend: Fitted, key: fitted, unit: "°/s"}
+          - legend: Residual
+            key: residual
+            unit: "°/s"
+            aggregations:
+              - type: mean
+                validators:
+                  - {operator: ">=", expected_value: -0.01}
+                  - {operator: "<=", expected_value: 0.01}
+              - type: std
+                validators:
+                  - {operator: "<=", expected_value: 0.3}
+              - type: p2p
+                validators:
+                  - {operator: "<=", expected_value: 2.0}
+
+      # ---- R² goodness of fit ----
+      - {name: Acc R² X, key: acc_r2_x, validators: [{operator: ">=", expected_value: 0.5}, {operator: "<=", expected_value: 1.0}]}
+      - {name: Acc R² Y, key: acc_r2_y, validators: [{operator: ">=", expected_value: 0.5}, {operator: "<=", expected_value: 1.0}]}
+      - {name: Acc R² Z, key: acc_r2_z, validators: [{operator: ">=", expected_value: 0.5}, {operator: "<=", expected_value: 1.0}]}
+      - {name: Gyro R² X, key: gyro_r2_x, validators: [{operator: ">=", expected_value: 0.5}, {operator: "<=", expected_value: 1.0}]}
+      - {name: Gyro R² Y, key: gyro_r2_y, validators: [{operator: ">=", expected_value: 0.5}, {operator: "<=", expected_value: 1.0}]}
+      - {name: Gyro R² Z, key: gyro_r2_z, validators: [{operator: ">=", expected_value: 0.5}, {operator: "<=", expected_value: 1.0}]}
